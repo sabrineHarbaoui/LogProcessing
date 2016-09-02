@@ -108,14 +108,32 @@ public class LogProcessing {
 
 	}
 	private static Boolean startWithDigit(String iLine){
-		char[] lArrayInt = {'0','1','2','3','4','5','6','7','8','9'};
-		char lFirstDigit = iLine.charAt(0);
-		for(char digit : lArrayInt){
-			if(lFirstDigit == digit){
-				return true;
-			}
-		}
-		return false;
+		 try {
+			 String[] lSplitLine = iLine.split(" ");
+				String lIp = lSplitLine[0];
+		        if ( lIp == null || lIp.isEmpty() ) {
+		            return false;
+		        }
+
+		        String[] parts = lIp.split( "\\." );
+		        if ( parts.length != 4 ) {
+		            return false;
+		        }
+
+		        for ( String s : parts ) {
+		            int i = Integer.parseInt( s );
+		            if ( (i < 0) || (i > 255) ) {
+		                return false;
+		            }
+		        }
+		        if ( lIp.endsWith(".") ) {
+		            return false;
+		        }
+
+		        return true;
+		    } catch (NumberFormatException nfe) {
+		        return false;
+		    }
 	}
 	public static void main( String[] args )
 	{

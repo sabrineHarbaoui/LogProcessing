@@ -30,7 +30,7 @@ public class LogProcessing {
 		JavaRDD<String> input = sc.textFile( iFilename );
 
 		// filter only the line contain the IP address
-		JavaRDD<String> text = input.filter(l -> startWithDigit(l));
+		JavaRDD<String> text = input.filter(l -> filterAddressIp(l));
 		JavaRDD<ParseData> data = text.flatMap(new FlatMapFunction<String, ParseData>() {
 			/**
 			 * 
@@ -107,7 +107,7 @@ public class LogProcessing {
 
 
 	}
-	private static Boolean startWithDigit(String iLine){
+	private static Boolean filterAddressIp(String iLine){
 		 try {
 			 String[] lSplitLine = iLine.split(" ");
 				String lIp = lSplitLine[0];

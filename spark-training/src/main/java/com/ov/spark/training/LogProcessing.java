@@ -3,8 +3,10 @@ package com.ov.spark.training;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 import org.apache.spark.SparkConf;
@@ -41,9 +43,48 @@ public class LogProcessing {
 				return (Iterable<ParseData>) parseFile(iLine);
 			}
 		});
+		//first part of parse Session by file
 		JavaPairRDD<String, Session> lSession = data.mapToPair(ses -> constructMapOfSession(ses))
-				                                    .reduceByKey((ses1,ses2) -> constructSession(ses1,ses2));
-		System.out.println(lSession.first()._2.mDuration);
+				.reduceByKey((ses1,ses2) -> constructSession(ses1,ses2));
+		lSession.saveAsTextFile("SessionByFile");
+		
+		//Second part of parse Session by day
+		JavaPairRDD<String, List<Session>> lListSession = data.mapToPair(ses -> constructMapOfListSession(ses))
+				                                        .reduceByKey((ses1,ses2) ->constructListSession(ses1,ses2));
+		lListSession.saveAsTextFile("SessionByDay");
+	}
+	private static List<Session> constructListSession(List<Session> iSes1, List<Session> iSes2){
+		if(iSes1.size() == 0 && iSes2.size() == 0)return new ArrayList<>();
+		if(iSes1.size() == 0 && iSes2.size() > 0)return iSes2;
+		if(iSes2.size() == 0 && iSes1.size() > 0)return iSes1;
+         Session lSes1 = iSes1.get(0);
+         Session lSes2 = iSes2.get(0);
+		Date lTimesTampConnect1 = lSes1.getmTimesTampConnect();
+		Date lTimesTampConnect2 = lSes2.getmTimesTampConnect();
+		Date lTimesTampConnect;
+		Date lTimesTampDisConnect;
+		long lDuration = 0;
+		long lTime1MilSec = lTimesTampConnect1.getTime();
+		long lTime2MilSec = lTimesTampConnect2.getTime();
+		final long MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24; 
+		long delta = lTime2MilSec - lTime1MilSec;
+		long nbJour = delta / (MILLISECONDS_PER_DAY);
+		if(nbJour < 1){
+			String lListUrl = lSes1.getmListUrl()+","+lSes2.getmListUrl();
+			String lListRequete = lSes1.getmListRequete()+","+lSes2.getmListRequete();
+			String lIp = lSes1.getmIp();
+			int lNumberOfPage = lSes1.getmNumberOfPage()+lSes2.getmNumberOfPage();
+			lTimesTampConnect = lTimesTampConnect1;
+			lTimesTampDisConnect = lTimesTampConnect2;
+			lDuration = lTime2MilSec - lTime1MilSec;
+			Session lSession = new Session(lIp, lTimesTampConnect, lTimesTampDisConnect,
+					lDuration, lListUrl, lListRequete, lNumberOfPage);
+			return Arrays.asList(lSession);
+		}else {
+			return Arrays.asList(lSes1,lSes2);
+
+		}
+
 	}
 	private static Session constructSession(Session iSes1, Session iSes2){
 
@@ -84,6 +125,19 @@ public class LogProcessing {
 
 
 	}
+	private static Tuple2<String,List<Session>> constructMapOfListSession(ParseData iData){
+		String lUser = iData.getmIp();
+		Date lTimesTampConnect = iData.getmTimesTamp();
+		String lListRequete = iData.getmRequete();
+		String lListUrl = iData.getmUrl();
+		int lDuration = 0;
+		int lNumberOfPage = 1;
+		Session lSessionofUser = new Session(lUser, lTimesTampConnect, lTimesTampConnect,
+				lDuration, lListUrl, lListRequete, lNumberOfPage);
+		return new Tuple2<String,List<Session>>(lUser,Arrays.asList(lSessionofUser));
+
+
+	}
 
 	private static Iterable<ParseData> parseFile(String iLine){
 		String[] lSplitLine = iLine.split(" ");
@@ -108,32 +162,32 @@ public class LogProcessing {
 
 	}
 	private static Boolean filterAddressIp(String iLine){
-		 try {
-			 String[] lSplitLine = iLine.split(" ");
-				String lIp = lSplitLine[0];
-		        if ( lIp == null || lIp.isEmpty() ) {
-		            return false;
-		        }
+		try {
+			String[] lSplitLine = iLine.split(" ");
+			String lIp = lSplitLine[0];
+			if ( lIp == null || lIp.isEmpty() ) {
+				return false;
+			}
 
-		        String[] parts = lIp.split( "\\." );
-		        if ( parts.length != 4 ) {
-		            return false;
-		        }
+			String[] parts = lIp.split( "\\." );
+			if ( parts.length != 4 ) {
+				return false;
+			}
 
-		        for ( String s : parts ) {
-		            int i = Integer.parseInt( s );
-		            if ( (i < 0) || (i > 255) ) {
-		                return false;
-		            }
-		        }
-		        if ( lIp.endsWith(".") ) {
-		            return false;
-		        }
+			for ( String s : parts ) {
+				int i = Integer.parseInt( s );
+				if ( (i < 0) || (i > 255) ) {
+					return false;
+				}
+			}
+			if ( lIp.endsWith(".") ) {
+				return false;
+			}
 
-		        return true;
-		    } catch (NumberFormatException nfe) {
-		        return false;
-		    }
+			return true;
+		} catch (NumberFormatException nfe) {
+			return false;
+		}
 	}
 	public static void main( String[] args )
 	{

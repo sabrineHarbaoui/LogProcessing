@@ -27,6 +27,22 @@ public class Session  implements Serializable{
 		this.mTimesTampConnect = iTimesTampConnect;
 		this.mTimesTampDisConnect = iTimesTampDisConnect;
 	}
+	
+	
+	
+	
+	@Override
+	public String toString() {
+		// TODO Auto-generated method stub
+		
+		String details = "Timestamp de connection: "+mTimesTampConnect
+				+"\nTimestamp de deconnection: "+mTimesTampDisConnect
+				+"\nDure: "+mDuration+" (millSeconde) "
+				+"\nList des requetes: "+mListRequete
+				+"\nlist des url visites: "+mListUrl
+				+"\nNumber de Page visites: "+mNumberOfPage;
+		return details;
+	}
 	public String getmIp() {
 		return mIp;
 	}
